@@ -1,4 +1,4 @@
-/// An instance of a Chip 8 VM holding all necesarry state,
+/// An instance of a Chip 8 VM holding all necessary state,
 /// including registers, main memory, PC, etc.
 /// # Registers:
 /// The Chip 8 uses 16 8-bit registers, labeled **v0** to **vF**
@@ -18,27 +18,67 @@
 ///
 /// ### Notes:
 /// All opcodes are 2 bytes long, so:
-/// * All fetchs will build a proper opcode by joining PC & PC + 1
+/// * All fetches will build a proper opcode by joining PC & PC + 1
 /// * The program counter must be incremented +2 after every fetch.
-///
-/// Stack depth is 16 levels.
-///
 struct Chip8 {
     registers_v: [u8; 16],
-    main_memory: [u8; 4096],
+    main_memory: [u8; Chip8::MAX_MEMORY_ADDRESS],
     stack: Stack,
     input: Input,
+    display: Display,
+}
+
+/// Contains all operation implementations for the Chip 8 VM and 'magic numbers'
+impl Chip8 {
+    const INITIAL_MEMORY_ADDRESS: usize = 0x200;
+    const MAX_MEMORY_ADDRESS: usize = 4096;
+
+    /// Instantiates a new Chip 8 VM with proper initial values.
+    /// # Initial values:
+    /// * **Registers**: All set to `0x0`,
+    /// * **Memory**: All addresses set to `0x0`,
+    /// * **Stack**: All addresses set to `0x0` and the SP set to `0`,
+    /// * **Input**: All 16 keys are set to `false` (non-pressed),
+    /// * **Display**: All 32x64 pixels are set to `false`.
+    fn new() -> Chip8 {
+        Chip8 {
+            registers_v: [0; 16],
+            main_memory: [0; 4096],
+            stack: Stack { stack_pointer: 0, stored_addresses: [0; 16] },
+            input: Input { key_status: [false; 16] },
+            display: Display { buffer: [[false; 64]; 32] },
+        }
+    }
+
+    /// Loads the binary content of a ROM stored as a `Vec<u8>` inside a VM instance
+    /// in the correct initial memory address.
+    /// # Returns
+    /// The amount of bytes that were loaded into `main_memory`.
+    /// # Fails
+    /// If the ROM is too big to be stored in memory.
+    fn load_rom_content(&mut self, content: Vec<u8>) -> Result<usize, &str> {
+        let content_size = content.len();
+        let upper_memory_bound = Chip8::INITIAL_MEMORY_ADDRESS + content_size;
+        if upper_memory_bound > Chip8::MAX_MEMORY_ADDRESS {
+            return Err("ROM size exceeds memory capacity.");
+        }
+
+        self.main_memory[Chip8::INITIAL_MEMORY_ADDRESS..upper_memory_bound]
+            .copy_from_slice(&content);
+
+        return Ok(content_size);
+    }
 }
 
 /// Holds the 16-level Chip 8 Stack and a single Stack Pointer.
-/// # Stored Adresses:
-/// Holds an ordered list of addresses wich come from the Program Counter in a **Chip 8 VM**
+/// # Stored Addresses:
+/// Holds an ordered list of addresses which come from the Program Counter in a **Chip 8 VM**
 /// # Stack Pointer:
-/// Points to the next valid position in **stored_adresses** in which a memory address coming
+/// Points to the next valid position in **stored_addresses** in which a memory address coming
 /// from the PC can be stored with a **CALL** instruction.
 struct Stack {
     stack_pointer: u8,
-    stored_adresses: [u16; 16],
+    stored_addresses: [u16; 16],
 }
 
 /// Stores the current status of each 16 input keys, mapped from **0x0** to **0xF**
@@ -55,7 +95,7 @@ struct Display {
     /// Tentative implementation as a boolean matrix.
     /// Access buffer values with: `buffer[row][col]`
     ///
-    /// Other posible implementations: 256 fixed size byte array.
+    /// Other possible implementations: 256 fixed size byte array.
     buffer: [[bool; 64]; 32]
 }
 
@@ -66,17 +106,25 @@ struct Timers {
 use std::env;
 use std::fs;
 use std::process::exit;
+use std::error::Error;
 
 fn main() {
-    let rom_content: Vec<u8>;
+    let mut chip_8_vm = Chip8::new();
 
     match env::args().nth(1) {
         Some(path) => {
             println!("Loading ROM {} ...", path);
             match fs::read(path) {
-                Ok(binary_content) => {
-                    println!("ROM loaded succesfully. {} bytes were read.", binary_content.len());
-                    rom_content = binary_content;
+                Ok(content) => {
+                    match chip_8_vm.load_rom_content(content) {
+                        Ok(total_read) => {
+                            println!("ROM loaded successfully. {} bytes were read.", total_read);
+                        }
+                        Err(msg) => {
+                            println!("ERROR: {}", msg);
+                            exit(1);
+                        }
+                    }
                 }
                 Err(err) => {
                     println!("ERROR: Failed to open the ROM.");
