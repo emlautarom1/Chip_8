@@ -20,7 +20,7 @@
 /// All opcodes are 2 bytes long, so:
 /// * All fetches will build a proper opcode by joining PC & PC + 1
 /// * The program counter must be incremented +2 after every fetch.
-pub(crate) struct Chip8 {
+pub struct Chip8 {
     registers_v: [u8; 16],
     ir: u16,
     pc: u16,
