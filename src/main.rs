@@ -22,6 +22,8 @@
 /// * The program counter must be incremented +2 after every fetch.
 struct Chip8 {
     registers_v: [u8; 16],
+    ir: u16,
+    pc: u16,
     main_memory: [u8; Chip8::MAX_MEMORY_ADDRESS],
     stack: Stack,
     input: Input,
@@ -43,6 +45,8 @@ impl Chip8 {
     fn new() -> Chip8 {
         Chip8 {
             registers_v: [0; 16],
+            ir: 0,
+            pc: Chip8::INITIAL_MEMORY_ADDRESS as u16,
             main_memory: [0; 4096],
             stack: Stack { stack_pointer: 0, stored_addresses: [0; 16] },
             input: Input { key_status: [false; 16] },
