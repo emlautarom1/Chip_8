@@ -30,6 +30,39 @@ pub struct Chip8 {
     display: Display,
 }
 
+/// Holds the 16-level Chip 8 Stack and a single Stack Pointer.
+/// # Stored Addresses:
+/// Holds an ordered list of addresses which come from the Program Counter in a **Chip 8 VM**
+/// # Stack Pointer:
+/// Points to the next valid position in **stored_addresses** in which a memory address coming
+/// from the PC can be stored with a **CALL** instruction.
+struct Stack {
+    stack_pointer: u8,
+    stored_addresses: [u16; 16],
+}
+
+/// Stores the current status of each 16 input keys, mapped from **0x0** to **0xF**
+struct Input {
+    key_status: [bool; 16]
+}
+
+/// Stores the display buffer of the Chip 8 VM.
+/// The buffer is 64 pixels wide and 32 pixels high.
+/// Only two values are accepted for each pixel: On or Off. We don't have color.
+///
+/// **Note:** All instruction that write outside the buffer valid range will wrap around.
+struct Display {
+    /// Tentative implementation as a boolean matrix.
+    /// Access buffer values with: `buffer[row][col]`
+    ///
+    /// Other possible implementations: 256 fixed size byte array.
+    buffer: [[bool; 64]; 32]
+}
+
+struct Timers {
+    // TODO: Currently not implemented!
+}
+
 /// Contains all operation implementations for the Chip 8 VM and 'magic numbers'
 impl Chip8 {
     const INITIAL_MEMORY_ADDRESS: usize = 0x200;
@@ -121,37 +154,4 @@ impl Chip8 {
             Err(_) => Err("ROM size exceeds memory capacity.")
         };
     }
-}
-
-/// Holds the 16-level Chip 8 Stack and a single Stack Pointer.
-/// # Stored Addresses:
-/// Holds an ordered list of addresses which come from the Program Counter in a **Chip 8 VM**
-/// # Stack Pointer:
-/// Points to the next valid position in **stored_addresses** in which a memory address coming
-/// from the PC can be stored with a **CALL** instruction.
-struct Stack {
-    stack_pointer: u8,
-    stored_addresses: [u16; 16],
-}
-
-/// Stores the current status of each 16 input keys, mapped from **0x0** to **0xF**
-struct Input {
-    key_status: [bool; 16]
-}
-
-/// Stores the display buffer of the Chip 8 VM.
-/// The buffer is 64 pixels wide and 32 pixels high.
-/// Only two values are accepted for each pixel: On or Off. We don't have color.
-///
-/// **Note:** All instruction that write outside the buffer valid range will wrap around.
-struct Display {
-    /// Tentative implementation as a boolean matrix.
-    /// Access buffer values with: `buffer[row][col]`
-    ///
-    /// Other possible implementations: 256 fixed size byte array.
-    buffer: [[bool; 64]; 32]
-}
-
-struct Timers {
-    // TODO: Currently not implemented!
 }
