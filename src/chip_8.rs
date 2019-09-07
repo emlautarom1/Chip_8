@@ -1,5 +1,3 @@
-use std::process::exit;
-
 /// An instance of a Chip 8 VM holding all necessary state,
 /// including registers, main memory, PC, etc.
 /// # Registers:
@@ -65,6 +63,9 @@ impl Chip8 {
     /// * **Stack**: All addresses set to `0x0` and the SP set to `0`,
     /// * **Input**: All 16 keys are set to `false` (non-pressed),
     /// * **Display**: All 32x64 pixels are set to `false`.
+    /// # Panics
+    /// If the VM can't load the initial fonts to memory. This should never happen, but if it does
+    /// the host PC memory may be corrupted / damaged.
     pub fn new() -> Chip8 {
         let mut instance = Chip8 {
             registers_v: [0; 16],
@@ -79,8 +80,7 @@ impl Chip8 {
         if instance
             .load_to_memory(Chip8::INITIAL_FONTS_MEMORY_ADDRESS, &Chip8::FONTS)
             .is_err() {
-            println!("Failed to load initial fonts.");
-            exit(1);
+            panic!("Failed to load initial fonts. VM could not be initialized.");
         }
 
         return instance;
