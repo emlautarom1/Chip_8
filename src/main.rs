@@ -35,15 +35,36 @@ impl Chip8 {
     const INITIAL_MEMORY_ADDRESS: usize = 0x200;
     const MAX_MEMORY_ADDRESS: usize = 4096;
 
+    const INITIAL_FONTS_MEMORY_ADDRESS: usize = 0x50;
+    const FONTS: [u8; 5 * 16] = [
+        0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+        0x20, 0x60, 0x20, 0x20, 0x70, // 1
+        0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+        0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+        0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+        0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+        0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+        0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+        0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+        0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+        0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+        0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+        0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+        0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+        0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+        0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+    ];
+
     /// Instantiates a new Chip 8 VM with proper initial values.
     /// # Initial values:
     /// * **Registers**: All set to `0x0`,
+    /// * **Program Counter**: Set to `INITIAL_MEMORY_ADDRESS`,
     /// * **Memory**: All addresses set to `0x0`,
     /// * **Stack**: All addresses set to `0x0` and the SP set to `0`,
     /// * **Input**: All 16 keys are set to `false` (non-pressed),
     /// * **Display**: All 32x64 pixels are set to `false`.
     fn new() -> Chip8 {
-        Chip8 {
+        let mut instance = Chip8 {
             registers_v: [0; 16],
             ir: 0,
             pc: Chip8::INITIAL_MEMORY_ADDRESS as u16,
@@ -51,7 +72,39 @@ impl Chip8 {
             stack: Stack { stack_pointer: 0, stored_addresses: [0; 16] },
             input: Input { key_status: [false; 16] },
             display: Display { buffer: [[false; 64]; 32] },
+        };
+
+        if instance
+            .load_to_memory(Chip8::INITIAL_FONTS_MEMORY_ADDRESS, &Chip8::FONTS)
+            .is_err() {
+            println!("Failed to load initial fonts.");
+            exit(1);
         }
+
+        return instance;
+    }
+
+    /// Loads to the `main_memory` some binary content stored as `&Vec<u8>` in a specified `initial_address`
+    /// # Returns
+    /// The amount of bytes that were loaded into `main_memory`.
+    /// # Fails
+    /// If the `initial_address` exceeds the `MAX_MEMORY_ADDRESS` or if the content is too big
+    /// to be stored in the `main_memory`
+    fn load_to_memory(&mut self, initial_address: usize, content: &[u8]) -> Result<usize, &str> {
+        if initial_address > Chip8::MAX_MEMORY_ADDRESS {
+            return Err("Invalid initial address: exceeds MAX_MEMORY_ADDRESS");
+        }
+
+        let content_size = content.len();
+        let end_address = initial_address + content_size;
+        if end_address > Chip8::MAX_MEMORY_ADDRESS {
+            return Err("Content can't be loaded outside memory bounds.");
+        }
+
+        self.main_memory[initial_address..end_address]
+            .copy_from_slice(content);
+
+        return Ok(content_size);
     }
 
     /// Loads the binary content of a ROM stored as a `Vec<u8>` inside a VM instance
@@ -61,16 +114,10 @@ impl Chip8 {
     /// # Fails
     /// If the ROM is too big to be stored in memory.
     fn load_rom_content(&mut self, content: Vec<u8>) -> Result<usize, &str> {
-        let content_size = content.len();
-        let upper_memory_bound = Chip8::INITIAL_MEMORY_ADDRESS + content_size;
-        if upper_memory_bound > Chip8::MAX_MEMORY_ADDRESS {
-            return Err("ROM size exceeds memory capacity.");
-        }
-
-        self.main_memory[Chip8::INITIAL_MEMORY_ADDRESS..upper_memory_bound]
-            .copy_from_slice(&content);
-
-        return Ok(content_size);
+        return match self.load_to_memory(Chip8::INITIAL_MEMORY_ADDRESS, &content) {
+            Ok(content_size) => Ok(content_size),
+            Err(_) => Err("ROM size exceeds memory capacity.")
+        };
     }
 }
 
