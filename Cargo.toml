@@ -5,3 +5,4 @@ authors = ["lautaroem1 <emlautarom1@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+rand = "0.7.0"
