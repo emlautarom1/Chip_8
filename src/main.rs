@@ -4,7 +4,6 @@ use chip_8::*;
 use std::env;
 use std::fs;
 use std::process::exit;
-use std::error::Error;
 
 fn main() {
     let mut chip_8_vm = Chip8::new();

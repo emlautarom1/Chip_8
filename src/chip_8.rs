@@ -43,7 +43,7 @@ struct Stack {
 
 /// Stores the current status of each 16 input keys, mapped from **0x0** to **0xF**
 struct Input {
-    key_status: [bool; 16]
+    key_status: [bool; 16],
 }
 
 /// Stores the display buffer of the Chip 8 VM.
@@ -56,7 +56,7 @@ struct Display {
     /// Access buffer values with: `buffer[row][col]`
     ///
     /// Other possible implementations: 256 fixed size byte array.
-    buffer: [[bool; 64]; 32]
+    buffer: [[bool; 64]; 32],
 }
 
 struct Timers {
@@ -85,7 +85,7 @@ impl Chip8 {
         0xF0, 0x80, 0x80, 0x80, 0xF0, // C
         0xE0, 0x90, 0x90, 0x90, 0xE0, // D
         0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-        0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+        0xF0, 0x80, 0xF0, 0x80, 0x80, // F
     ];
 
     /// Instantiates a new Chip 8 VM with proper initial values.
@@ -105,14 +105,22 @@ impl Chip8 {
             ir: 0,
             pc: Chip8::INITIAL_MEMORY_ADDRESS as u16,
             main_memory: [0; 4096],
-            stack: Stack { stack_pointer: 0, stored_addresses: [0; 16] },
-            input: Input { key_status: [false; 16] },
-            display: Display { buffer: [[false; 64]; 32] },
+            stack: Stack {
+                stack_pointer: 0,
+                stored_addresses: [0; 16],
+            },
+            input: Input {
+                key_status: [false; 16],
+            },
+            display: Display {
+                buffer: [[false; 64]; 32],
+            },
         };
 
         if instance
             .load_to_memory(Chip8::INITIAL_FONTS_MEMORY_ADDRESS, &Chip8::FONTS)
-            .is_err() {
+            .is_err()
+        {
             panic!("Failed to load initial fonts. VM could not be initialized.");
         }
 
@@ -136,8 +144,7 @@ impl Chip8 {
             return Err("Content can't be loaded outside memory bounds.");
         }
 
-        self.main_memory[initial_address..end_address]
-            .copy_from_slice(content);
+        self.main_memory[initial_address..end_address].copy_from_slice(content);
 
         return Ok(content_size);
     }
@@ -151,7 +158,7 @@ impl Chip8 {
     pub fn load_rom_content(&mut self, content: Vec<u8>) -> Result<usize, &str> {
         return match self.load_to_memory(Chip8::INITIAL_MEMORY_ADDRESS, &content) {
             Ok(content_size) => Ok(content_size),
-            Err(_) => Err("ROM size exceeds memory capacity.")
+            Err(_) => Err("ROM size exceeds memory capacity."),
         };
     }
 }
