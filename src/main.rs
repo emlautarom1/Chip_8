@@ -1,6 +1,6 @@
 mod chip_8;
 
-use chip_8::*;
+use chip_8::Chip8;
 use std::env;
 use std::fs;
 use std::process::exit;
