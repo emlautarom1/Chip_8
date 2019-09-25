@@ -24,6 +24,7 @@ pub struct Chip8 {
     registers_v: [u8; 16],
     ir: u16,
     pc: u16,
+    opcode: u16,
     main_memory: [u8; Chip8::MAX_MEMORY_ADDRESS],
     stack: Stack,
     input: Input,
@@ -104,6 +105,7 @@ impl Chip8 {
             registers_v: [0; 16],
             ir: 0,
             pc: Chip8::INITIAL_MEMORY_ADDRESS as u16,
+            opcode: 0,
             main_memory: [0; 4096],
             stack: Stack {
                 stack_pointer: 0,
@@ -160,5 +162,127 @@ impl Chip8 {
             Ok(content_size) => Ok(content_size),
             Err(_) => Err("ROM size exceeds memory capacity."),
         };
+    }
+
+    /// Cycle emulation for the Chip 8 VM.
+    /// During a `cycle` the VM will:
+    /// - Fetch the next instruction and store as an opcode inside the `Chip8` struct
+    /// - Update the `program counter` before any instruction execution takes place
+    /// - Decode the `opcode` and execute it
+    /// - Update both `Timers` (`delay` and `sound`) if needed
+    fn cycle(&mut self) {
+        // Fetch
+        self.opcode = self.fetch();
+        // Update PC
+        self.increment_pc();
+        // Decode and Execute
+        // self.execute();
+        // TODO: Handle timers
+    }
+
+    fn increment_pc(&mut self) {
+        self.pc += 2;
+    }
+
+    fn fetch(&mut self) -> u16 {
+        let lows = (self.main_memory[self.pc as usize] as u16) << 8;
+        let highs = self.main_memory[(self.pc as usize) + 1] as u16;
+        return lows | highs;
+    }
+}
+
+/// Instruction implementation
+impl Chip8 {
+    fn CLS(&mut self) {
+        self.display.buffer = [[false; 64]; 32];
+    }
+
+    fn RET(&mut self) {
+        self.stack.stack_pointer -= 1;
+        self.pc = self.stack.stored_addresses[self.stack.stack_pointer as usize];
+    }
+
+    /// **OP Code**: 1NNN
+    ///
+    /// Jump to address `NNN`
+    fn JP(&mut self) {
+        let address = self.opcode & 0x0FFF;
+        self.pc = address;
+    }
+
+    /// **OP Code**: `2NNN`
+    ///
+    /// Call subroutine at `NNN`
+    fn CALL(&mut self) {
+        let address = self.opcode & 0x0FFF;
+        self.stack.stored_addresses[self.stack.stack_pointer as usize] = self.pc;
+        self.stack.stack_pointer += 1;
+        self.pc = address;
+    }
+
+    /// **OP Code**: `3XKK`
+    ///
+    /// Skip next instruction if `v[X]` == `KK`
+    fn SE_VX_VALUE(&mut self) {
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let value = (self.opcode as u8) & 0x00FF;
+
+        if self.registers_v[x] == value {
+            self.increment_pc();
+        }
+    }
+
+    /// **OP Code**: `4XKK`
+    ///
+    /// Skip next instruction if `v[X] != KK`
+    fn SNE_VX_VALUE(&mut self) {
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let value = (self.opcode as u8) & 0x00FF;
+
+        if self.registers_v[x] != value {
+            self.increment_pc();
+        }
+    }
+
+    /// **OP Code**: `5XY0`
+    ///
+    /// Skip next instruction if `v[X] == v[Y]`
+    fn SE_VX_VY(&mut self) {
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let y = ((self.opcode & 0x00F0) >> 8) as usize;
+
+        if self.registers_v[x] == self.registers_v[y] {
+            self.increment_pc();
+        }
+    }
+
+    /// **OP Code**: `6XKK`
+    ///
+    /// Set `v[X]` = `KK`
+    fn LD_VX_VALUE(&mut self) {
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let value = (self.opcode as u8) & 0x00FF;
+
+        self.registers_v[x] = value;
+    }
+
+    /// **OP Code**: `7XKK`
+    ///
+    /// Set `v[X] = v[X] + KK`
+    fn ADD_VX_VALUE(&mut self) {
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let value = (self.opcode as u8) & 0x00FF;
+
+        self.registers_v[x] += value;
+    }
+
+    /// **OP Code**: `0XY0`
+    ///
+    /// Set `v[X] = v[Y]`
+    fn LD_VX_VY(&mut self) {
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let y = ((self.opcode & 0x00F0) >> 8) as usize;
+
+        self.registers_v[x] = self.registers_v[y];
     }
 }
