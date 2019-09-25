@@ -14,7 +14,7 @@ fn main() {
             println!("Usage: ./chip8.exe (path-to-your-rom)");
             exit(1);
         }
-        Some(path) => path
+        Some(path) => path,
     };
 
     let rom_binary_content = match fs::read(&path) {
@@ -36,4 +36,6 @@ fn main() {
             println!("ROM loaded successfully. {} bytes were read.", total_read);
         }
     }
+
+    chip_8_vm.start();
 }
