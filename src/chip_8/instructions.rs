@@ -180,7 +180,7 @@ impl Chip8 {
     ///
     /// Set `v[x] = random byte AND kk`
     pub fn rnd_vx_byte(&mut self, x: usize, kk: u8) {
-        let rand: u8 = 0xFF; // TODO: Add random generation
+        let rand: u8 = rand::random();
 
         self.regs.v[x] = rand & kk;
     }
