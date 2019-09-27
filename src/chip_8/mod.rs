@@ -1,14 +1,14 @@
 mod instructions;
 
-/// An instance of a Chip 8 VM holding all necessary state,
+/// An instance of a `CHIP-8` VM holding all necessary state,
 /// including registers, main memory, PC, etc.
 /// # Main memory:
-/// The CHIP-8 has 4096 bytes of memory, meaning the address space
-/// is from **0x000** to **0xFFF**.
+/// The CHIP-8 has `4096` bytes of memory, meaning the address space
+/// is from `0x000` to `0xFFF`.
 /// ## Memory sections:
-/// * **0x000** - **0x1FF**: Originally reserved for the Chip 8 interpreter.
-/// * **0x050** - **0x0A0**: Storage for the 16 built-in characters.
-/// * **0x200** - **0xFFF**: ROM instructions are loaded in this region and
+/// * `0x000` - `0x1FF`: Originally reserved for the `CHIP-8` interpreter.
+/// * `0x050` - `0x0A0`: Storage for the 16 built-in characters.
+/// * `0x200` - `0xFFF`: ROM instructions are loaded in this region and
 /// all remaining space is free to be used as the developer sees fit.
 ///
 /// ### Notes:
@@ -21,10 +21,11 @@ pub struct Chip8 {
     stack: Stack,
     input: Input,
     display: Display,
+    timers: Timers,
 }
 
-/// The Chip 8 uses 16 8-bit general purpose registers, labeled **v[0x0]** to **v[0xF]**
-/// where **v[0xF]** holds information about the result of operations.
+/// The `CHIP-8` uses 16 8-bit general purpose registers, labeled `v[0x0]` to `v[0xF]`
+/// where `v[0xF]` holds information about the result of operations.
 /// # Index register
 /// 16-bit register that stores memory addresses for use in operations.
 /// # Program counter:
@@ -35,47 +36,45 @@ pub struct Registers {
     pc: u16,
 }
 
-/// Holds the 16-level Chip 8 Stack and a single Stack Pointer.
+/// Holds the 16-level `CHIP-8` Stack and a single Stack Pointer.
 /// # Stored Addresses:
-/// Holds an ordered list of addresses which come from the Program Counter in a **Chip 8 VM**
+/// Holds an ordered list of addresses which come from the PC in a `CHIP-8` VM
 /// # Stack Pointer:
-/// Points to the next valid position in **stored_addresses** in which a memory address coming
-/// from the PC can be stored with a **CALL** instruction.
+/// Points to the next valid position in `stored_addresses` in which a memory address coming
+/// from the PC can be stored with a `CALL` instruction
 pub struct Stack {
     pointer: u8,
     stored: [u16; 16],
 }
 
-/// Stores the current status of each 16 input keys, mapped from **0x0** to **0xF**
+/// Stores the current status of each 16 input keys, mapped from `0x0` to `0xF`
 pub struct Input {
     key_status: [bool; 16],
 }
 
-/// Stores the display buffer of the Chip 8 VM.
+/// Stores the display buffer of the `CHIP-8` VM.
 /// The buffer is 64 pixels wide and 32 pixels high.
 /// Only two values are accepted for each pixel: On or Off. We don't have color.
 ///
 /// **Note:** All instruction that write outside the buffer valid range will wrap around.
 pub struct Display {
-    /// Tentative implementation as a boolean matrix.
     /// Access buffer values with: `buffer[row][col]`
-    ///
-    /// Other possible implementations: 256 fixed size byte array.
-    buffer: [[bool; 64]; 32],
+    buffer: [[bool; Chip8::VIDEO_WIDTH]; Chip8::VIDEO_HEIGHT],
 }
 
 pub struct Timers {
-    // TODO: Currently not implemented!
+    delay: u8,
+    sound: u8,
 }
 
 impl Stack {
-    /// Stores a `value` in the `Stack`
+    /// Stores a `u16` value in the Stack
     fn push(&mut self, value: u16) {
         self.stored[self.pointer as usize] = value;
         self.pointer += 1;
     }
 
-    /// Removes the top of the `Stack` and returns it
+    /// Removes the top of the Stack and returns it
     fn pop(&mut self) -> u16 {
         self.pointer -= 1;
         return self.stored[self.pointer as usize];
@@ -85,6 +84,8 @@ impl Stack {
 impl Chip8 {
     const INITIAL_MEMORY_ADDRESS: usize = 0x200;
     const MAX_MEMORY_ADDRESS: usize = 4096;
+    const VIDEO_WIDTH: usize = 64;
+    const VIDEO_HEIGHT: usize = 32;
 
     const INITIAL_FONTS_MEMORY_ADDRESS: usize = 0x50;
     const FONTS: [u8; 5 * 16] = [
@@ -106,7 +107,7 @@ impl Chip8 {
         0xF0, 0x80, 0xF0, 0x80, 0x80, // F
     ];
 
-    /// Instantiates a new Chip 8 VM with proper initial values.
+    /// Instantiates a new `CHIP-8` VM with proper initial values.
     /// # Initial values:
     /// * **Registers**: All set to `0x0`,
     /// * **Program Counter**: Set to `INITIAL_MEMORY_ADDRESS`,
@@ -115,8 +116,7 @@ impl Chip8 {
     /// * **Input**: All 16 keys are set to `false` (non-pressed),
     /// * **Display**: All 32x64 pixels are set to `false`.
     /// # Panics
-    /// If the VM can't load the initial fonts to memory. This should never happen, but if it does
-    /// the host PC memory may be corrupted / damaged.
+    /// If the VM can't load the initial fonts to memory. This should never happen
     pub fn new() -> Chip8 {
         let mut instance = Chip8 {
             main_memory: [0; 4096],
@@ -133,8 +133,9 @@ impl Chip8 {
                 key_status: [false; 16],
             },
             display: Display {
-                buffer: [[false; 64]; 32],
+                buffer: [[false; Chip8::VIDEO_WIDTH]; Chip8::VIDEO_HEIGHT],
             },
+            timers: Timers { delay: 0, sound: 0 },
         };
 
         if instance
@@ -189,12 +190,12 @@ impl Chip8 {
         }
     }
 
-    /// Cycle emulation for the Chip 8 VM.
+    /// Cycle emulation for a VM.
     /// During a `cycle` the VM will:
-    /// - Fetch the next instruction and store as an opcode inside the `Chip8` struct
-    /// - Update the `program counter` before any instruction execution takes place
-    /// - Decode the `opcode` and execute it
-    /// - Update both `Timers` (`delay` and `sound`) if needed
+    /// - Fetch the next instruction
+    /// - Update the `Program Counter` before any instruction execution takes place
+    /// - Decode the instruction and execute it
+    /// - Update both Timers (`delay` and `sound`) if needed
     fn cycle(&mut self) {
         // Fetch
         let opcode = self.fetch();
@@ -205,15 +206,33 @@ impl Chip8 {
         // Decode and Execute
         self.execute(opcode);
 
-        // TODO: Handle timers
+        // Handle timers
+        self.handle_timers();
     }
 
+    /// Fetches an OP Code as `u16` from the `main_memory` according to the current PC
+    /// and returns it
     fn fetch(&mut self) -> u16 {
         let lows = (self.main_memory[self.regs.pc as usize] as u16) << 8;
         let highs = self.main_memory[(self.regs.pc as usize) + 1] as u16;
         return lows | highs;
     }
 
+    /// Updates both timers in an instance of a `VM`
+    /// If a timers is higher than `0` then it's decremented by `1`
+    fn handle_timers(&mut self) {
+        if self.timers.delay > 0 {
+            self.timers.delay -= 1;
+        }
+
+        if self.timers.sound > 0 {
+            self.timers.sound -= 1;
+        }
+    }
+
+    /// Decodes and executes the next instruction according to the current PC
+    /// In case the decoding fails - ex: invalid OP Code - the execution
+    /// is treated as a `NO-OP` (No Operation)
     fn execute(&mut self, opcode: u16) {
         let nibbles = (
             (opcode & 0xF000) >> 12 as u8,
@@ -263,9 +282,7 @@ impl Chip8 {
             (0xF, _, 0x3, 0x3) => self.ld_b_vx(x),
             (0xF, _, 0x5, 0x5) => self.ld_i_vx(x),
             (0xF, _, 0x6, 0x5) => self.ld_vx_i(x),
-            _ => {
-                // Invalid operations are interpreted as NO-OP
-            }
+            _ => {}
         };
     }
 }
