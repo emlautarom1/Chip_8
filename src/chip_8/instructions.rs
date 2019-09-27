@@ -3,7 +3,7 @@ use super::Chip8;
 impl Chip8 {
     /// **OP Code:** `00E0`
     ///
-    /// Clear the diisplay
+    /// Clear the display
     pub fn cls(&mut self) {
         self.display.buffer = [[false; 64]; 32];
     }
@@ -192,7 +192,7 @@ impl Chip8 {
     /// These bytes are then displayed as sprites on screen at
     /// coordinates `(v[x], v[y])`. Sprites are `XORed` onto the existing screen.
     /// Set `v[0xF] = any pixel was erased`
-    /// 
+    ///
     /// **Note:** If the sprite is positioned so part of it is outside
     /// the coordinates of the display, it wraps around to the opposite side
     pub fn drw_vx_vy_n(&mut self, x: usize, y: usize, n: usize) {
@@ -200,9 +200,7 @@ impl Chip8 {
         for byte in 0..n {
             let row = (y + byte) % Chip8::VIDEO_HEIGHT;
             for bit in 0..8 {
-                // println!("x: {} y: {} byte: {} bit: {}", x, y, byte, bit);
                 let col = (x + bit) % Chip8::VIDEO_WIDTH;
-
                 let color = (self.main_memory[self.regs.i as usize + byte] >> (7 - bit)) & 1;
                 let existing_color = self.display.buffer[row][col];
                 self.regs.v[0xF] |= color & (existing_color as u8);
