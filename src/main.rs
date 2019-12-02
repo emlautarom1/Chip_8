@@ -5,6 +5,8 @@ use std::env;
 use std::fs;
 use std::process::exit;
 
+const DEFAULT_CYCLE_DELAY: u64 = 10;
+
 fn main() {
     let mut chip_8_vm = Chip8::new();
 
@@ -26,6 +28,17 @@ fn main() {
         Ok(content) => content,
     };
 
+    let cycle_delay: u64 = match env::args().nth(2) {
+        None => DEFAULT_CYCLE_DELAY,
+        Some(delay) => match delay.parse::<u64>() {
+            Ok(delay) => delay,
+            Err(msg) => {
+                println!("ERROR: {}", msg);
+                exit(1);
+            }
+        },
+    };
+
     println!("Loading ROM {} ...", &path);
     match chip_8_vm.load_rom_content(rom_binary_content) {
         Err(msg) => {
@@ -37,5 +50,5 @@ fn main() {
         }
     }
 
-    chip_8_vm.start();
+    chip_8_vm.start(cycle_delay);
 }

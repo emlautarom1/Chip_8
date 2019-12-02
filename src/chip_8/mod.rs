@@ -1,5 +1,7 @@
 mod instructions;
 
+use std::time::{Duration, Instant};
+
 /// An instance of a `CHIP-8` VM holding all necessary state,
 /// including registers, main memory, PC, etc.
 /// # Main memory:
@@ -13,7 +15,7 @@ mod instructions;
 ///
 /// ### Notes:
 /// All opcodes are 2 bytes long, so:
-/// * All fetches will build a proper opcode by joining PC & PC + 1
+/// * All fetches will build a proper opcode by joining `PC` & `PC + 1`
 /// * The program counter must be incremented +2 after every fetch.
 pub struct Chip8 {
     main_memory: [u8; Chip8::MAX_MEMORY_ADDRESS],
@@ -58,8 +60,7 @@ pub struct Input {
 ///
 /// **Note:** All instruction that write outside the buffer valid range will wrap around.
 pub struct Display {
-    /// Access buffer values with: `buffer[row][col]`
-    buffer: [[bool; Chip8::VIDEO_WIDTH]; Chip8::VIDEO_HEIGHT],
+    buffer: [bool; Chip8::VIDEO_WIDTH * Chip8::VIDEO_HEIGHT],
 }
 
 pub struct Timers {
@@ -133,7 +134,7 @@ impl Chip8 {
                 key_status: [false; 16],
             },
             display: Display {
-                buffer: [[false; Chip8::VIDEO_WIDTH]; Chip8::VIDEO_HEIGHT],
+                buffer: [false; Chip8::VIDEO_WIDTH * Chip8::VIDEO_HEIGHT],
             },
             timers: Timers { delay: 0, sound: 0 },
         };
@@ -184,9 +185,15 @@ impl Chip8 {
     }
 
     /// Starts an infinite loop of execution of the VM
-    pub fn start(&mut self) {
+    pub fn start(&mut self, cycle_delay: u64) {
+        let cycle_delay: Duration = Duration::from_millis(cycle_delay);
+        let mut last_time = Instant::now();
         loop {
-            self.cycle();
+            let dt = last_time.elapsed();
+            if dt > cycle_delay {
+                self.cycle();
+            }
+            last_time = std::time::Instant::now();
         }
     }
 
