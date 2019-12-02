@@ -5,7 +5,7 @@ impl Chip8 {
     ///
     /// Clear the display
     pub fn cls(&mut self) {
-        self.display.buffer = [[false; 64]; 32];
+        self.display.buffer = [false; Chip8::VIDEO_WIDTH * Chip8::VIDEO_HEIGHT];
     }
 
     /// **OP Code:** `00EE`
@@ -197,16 +197,38 @@ impl Chip8 {
     /// the coordinates of the display, it wraps around to the opposite side
     pub fn drw_vx_vy_n(&mut self, x: usize, y: usize, n: usize) {
         self.regs.v[0xF] = 0;
-        for byte in 0..n {
-            let row = (y + byte) % Chip8::VIDEO_HEIGHT;
-            for bit in 0..8 {
-                let col = (x + bit) % Chip8::VIDEO_WIDTH;
-                let color = (self.main_memory[self.regs.i as usize + byte] >> (7 - bit)) & 1;
-                let existing_color = self.display.buffer[row][col];
-                self.regs.v[0xF] |= color & (existing_color as u8);
-                self.display.buffer[y][x] ^= color != 0;
+
+        let x_pos: usize = (self.regs.v[x] as usize) % Chip8::VIDEO_WIDTH;
+        let y_pos: usize = (self.regs.v[y] as usize) % Chip8::VIDEO_HEIGHT;
+
+        for row in 0..n {
+            let sprite_byte = self.main_memory[(self.regs.i as usize) + row];
+            for col in 0..8 {
+                let sprite_pixel = sprite_byte & (0x80 >> col);
+                let screen_pixel =
+                    &mut self.display.buffer[(y_pos + row) * Chip8::VIDEO_WIDTH + (x_pos + col)];
+
+                if sprite_pixel != 0 {
+                    if *screen_pixel {
+                        self.regs.v[0xF] = 1;
+                    }
+
+                    *screen_pixel |= true;
+                }
             }
         }
+
+        // ? Old implementation: Didn't work
+        // for byte in 0..n {
+        //     let row = (y + byte) % Chip8::VIDEO_HEIGHT;
+        //     for bit in 0..8 {
+        //         let col = (x + bit) % Chip8::VIDEO_WIDTH;
+        //         let color = (self.main_memory[self.regs.i as usize + byte] >> (7 - bit)) & 1;
+        //         let existing_color = self.display.buffer[row][col];
+        //         self.regs.v[0xF] |= color & (existing_color as u8);
+        //         self.display.buffer[y][x] ^= color != 0;
+        //     }
+        // }
     }
 
     /// **OP Code:** `Ex9E`
