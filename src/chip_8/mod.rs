@@ -284,9 +284,8 @@ impl Chip8 {
         };
     }
 
-    /// Starts an infinite loop of execution of the VM
-    /// Creates a new Window and renders this `CHIP-8` VM output in it.
-    /// It handles user input and closing the application
+    /// Starts an the execution of a `CHIP-8` VM.
+    /// This will create a main window and manage an infinite loop
     pub fn start(&mut self, cycle_delay: u64) {
         use piston::input::*;
         use piston::{EventSettings, Events};
@@ -302,11 +301,11 @@ impl Chip8 {
         let mut events = Events::new(EventSettings::new());
         while let Some(e) = events.next(&mut window) {
             
-            if let Some(Button::Keyboard(_key)) = e.press_args() {
+            if let Some(Button::Keyboard(key)) = e.press_args() {
                 // TODO: Handle key press
             };
             if let Some(button) = e.release_args() {
-                if let Button::Keyboard(_key) = button {
+                if let Button::Keyboard(key) = button {
                     // TODO: Handle key release
                 };
             };
