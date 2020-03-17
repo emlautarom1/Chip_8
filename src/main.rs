@@ -8,12 +8,13 @@ use std::process::exit;
 const DEFAULT_CYCLE_DELAY: u64 = 10;
 
 fn main() {
+    let executable_name = env::args().nth(0).unwrap();
     let mut chip_8_vm = Chip8::new();
 
     let path = match env::args().nth(1) {
         None => {
             println!("ERROR: No ROM provided.");
-            println!("Usage: ./chip8.exe (path-to-your-rom)");
+            println!("Usage: {} (path-to-your-rom)", executable_name);
             exit(1);
         }
         Some(path) => path,
