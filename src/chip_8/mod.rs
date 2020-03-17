@@ -1,6 +1,10 @@
 mod instructions;
+mod utils;
 
-use std::time::{Duration, Instant};
+extern crate glutin_window;
+extern crate graphics;
+extern crate opengl_graphics;
+extern crate piston;
 
 /// An instance of a `CHIP-8` VM holding all necessary state,
 /// including registers, main memory, PC, etc.
@@ -184,19 +188,6 @@ impl Chip8 {
         };
     }
 
-    /// Starts an infinite loop of execution of the VM
-    pub fn start(&mut self, cycle_delay: u64) {
-        let cycle_delay: Duration = Duration::from_millis(cycle_delay);
-        let mut last_time = Instant::now();
-        loop {
-            let dt = last_time.elapsed();
-            if dt > cycle_delay {
-                self.cycle();
-            }
-            last_time = std::time::Instant::now();
-        }
-    }
-
     /// Cycle emulation for a VM.
     /// During a `cycle` the VM will:
     /// - Fetch the next instruction
@@ -291,5 +282,61 @@ impl Chip8 {
             (0xF, _, 0x6, 0x5) => self.ld_vx_i(x),
             _ => {}
         };
+    }
+
+    /// Starts an infinite loop of execution of the VM
+    /// Creates a new Window and renders this `CHIP-8` VM output in it.
+    /// It handles user input and closing the application
+    pub fn start(&mut self, cycle_delay: u64) {
+        use piston::input::*;
+        use piston::{EventSettings, Events};
+        use std::time::{Duration, Instant};
+        use utils::*;
+
+        let mut window = build_window();
+        let mut gl = build_graphics();
+        let cycle_delay = Duration::from_millis(cycle_delay);
+
+        let mut last_cycle_time = Instant::now();
+
+        let mut events = Events::new(EventSettings::new());
+        while let Some(e) = events.next(&mut window) {
+            
+            if let Some(Button::Keyboard(_key)) = e.press_args() {
+                // TODO: Handle key press
+            };
+            if let Some(button) = e.release_args() {
+                if let Button::Keyboard(_key) = button {
+                    // TODO: Handle key release
+                };
+            };
+
+            if let Some(args) = e.render_args() {
+                use graphics::*;
+
+                let pixel_size: f64 = 20.0;
+                let square = rectangle::square(0.0, 0.0, pixel_size);
+
+                gl.draw(args.viewport(), |ctx, gl| {
+                    clear(BLACK, gl);
+                    for (pos, &is_pixel_on) in self.display.buffer.iter().enumerate() {
+                        let x: f64 = (pos % Chip8::VIDEO_WIDTH) as f64 * pixel_size;
+                        let y: f64 = (pos / Chip8::VIDEO_WIDTH) as f64 * pixel_size;
+                        let transform = ctx.transform.trans(x, y);
+                        if is_pixel_on {
+                            rectangle(WHITE, square, transform, gl);
+                        }
+                    }
+                });
+            }
+
+            if let Some(_) = e.update_args() {
+                let dt = last_cycle_time.elapsed();
+                if dt > cycle_delay {
+                    self.cycle();
+                    last_cycle_time = Instant::now();
+                }
+            };
+        }
     }
 }
