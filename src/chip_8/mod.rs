@@ -300,12 +300,11 @@ impl Chip8 {
 
         let mut events = Events::new(EventSettings::new());
         while let Some(e) = events.next(&mut window) {
-            
-            if let Some(Button::Keyboard(key)) = e.press_args() {
+            if let Some(Button::Keyboard(_key)) = e.press_args() {
                 // TODO: Handle key press
             };
             if let Some(button) = e.release_args() {
-                if let Button::Keyboard(key) = button {
+                if let Button::Keyboard(_key) = button {
                     // TODO: Handle key release
                 };
             };
