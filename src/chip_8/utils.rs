@@ -3,7 +3,7 @@ use graphics::types::Color;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::window::WindowSettings;
 
-pub const BLACK: Color = [0.0, 0.0, 0.0, 0.0];
+pub const BLACK: Color = [0.0, 0.0, 0.0, 1.0];
 pub const WHITE: Color = [1.0, 1.0, 1.0, 1.0];
 
 /// OpenGL version used
