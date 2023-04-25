@@ -2,9 +2,9 @@
 
 ![Logo](logo.jpg)
 
-Simple but extensively documented Chip 8 emulator implemented in Rust. It's my first glance at the emulation world and my first serious Rust project.
+Simple but extensively documented Chip-8 emulator implemented in Rust. It's my first glance at the emulation world and my first serious Rust project.
 
-Thanks to [Austin Morlan](https://austinmorlan.com/posts/chip8_emulator/) for sharing an amazing post of the Chip 8, which I used as reference for this project.
+Thanks to [Austin Morlan](https://austinmorlan.com/posts/chip8_emulator/) for sharing an amazing post of the Chip-8, which I used as reference for this project.
 
 ## Requirements
 - Rust toolchain (rustc, cargo)
